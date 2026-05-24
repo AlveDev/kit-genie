@@ -3,21 +3,21 @@ export function LandingWhatsapp() {
     <section className="bg-surface py-24">
       <div className="max-w-7xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
         <div>
-          <span className="text-xs font-bold uppercase tracking-widest text-primary">Catálogo vivo</span>
+          <span className="text-xs font-bold uppercase tracking-widest text-primary">Bot premium · R$ 9,90/mês</span>
           <h2 className="font-display text-4xl md:text-5xl mt-3 mb-6 text-balance">
-            Seu WhatsApp vira o <span className="italic text-primary">front da operação</span>.
+            Seus clientes também <span className="italic text-primary">têm uma assistente</span>.
           </h2>
           <p className="text-muted-foreground mb-6 text-pretty leading-relaxed">
-            Você (ou seu SDR digital, com upgrade R$ 9,90/mês) conversa naturalmente com a cliente.
-            O sistema sabe exatamente o estoque, calcula o orçamento e bloqueia as peças
-            para a data do evento — tudo em segundos. Você foca em criatividade, ele cuida da operação.
+            Sabe aquela cliente que manda mensagem às 23h perguntando se tem Kit Jardim pra semana que vem?
+            Com a automação, o sistema responde na hora — com disponibilidade real, preço e opção de já confirmar.
+            Você só aparece quando a venda está fechada.
           </p>
           <ul className="space-y-3 text-sm">
             {[
-              "Cliente pede tema Mickey → sistema responde com disponibilidade real",
-              "Confirmou? Estoque já bloqueado nas datas do evento",
-              "Faltou peça? Alerta no seu painel antes do problema",
-              "Atendeu manualmente? Basta registrar a venda — o resto é automático",
+              "Cliente pergunta disponibilidade → sistema responde com estoque real",
+              "Confirmou? Peças já bloqueadas na data do evento",
+              "Vai faltar alguma peça? Alerta no seu painel antes do problema",
+              "Registrou manualmente? Estoque já atualizado sozinho",
             ].map(t => (
               <li key={t} className="flex gap-3 items-start">
                 <span className="mt-1.5 size-2 rounded-full bg-primary shrink-0" />
@@ -25,6 +25,10 @@ export function LandingWhatsapp() {
               </li>
             ))}
           </ul>
+          <div className="mt-8 inline-flex items-center gap-2 bg-secondary px-4 py-2 rounded-full text-sm text-muted-foreground">
+            <span>🟢</span>
+            <span>Requer plano Z-API gratuito + configuração simples</span>
+          </div>
         </div>
 
         {/* WhatsApp mockup */}
@@ -35,15 +39,16 @@ export function LandingWhatsapp() {
               <div className="size-10 rounded-full bg-emerald-500 grid place-items-center font-bold">PL</div>
               <div>
                 <div className="font-semibold text-sm">Pink Love Decorações</div>
-                <div className="text-[10px] opacity-80">online · respondendo</div>
+                <div className="text-[10px] opacity-80">online · respondendo automaticamente</div>
               </div>
             </div>
-            <div className="p-5 space-y-3 bg-[#efeae2] min-h-[420px]">
-              <Msg side="left">Oi! Você tem Kit Mickey disponível pro dia 22/10?</Msg>
-              <Msg side="right">Oi querida! 💕 Verifiquei aqui no sistema e SIM, temos 1 Kit Mickey Premium livre nessa data.</Msg>
-              <Msg side="right">O investimento é R$ 850 (decoração montada). Posso já reservar pra você?</Msg>
-              <Msg side="left">Pode sim! Já confirmo o pix.</Msg>
-              <Msg side="right" small>✓ Venda registrada · estoque atualizado · evento agendado</Msg>
+            <div className="p-5 space-y-3 bg-[#efeae2] min-h-[380px]">
+              <Msg side="left">Oi! Vi seu Insta, tem Kit Jardim Encantado pra 14/09?</Msg>
+              <Msg side="right">Oi! 💕 Tenho sim! O Kit Jardim tá disponível nessa data. Investimento a partir de R$ 750. Posso mandar as fotos?</Msg>
+              <Msg side="left">Manda!</Msg>
+              <Msg side="right">📸 [Kit Jardim Encantado] Vem com arco floral, mesa + painel. Fechamos?</Msg>
+              <Msg side="left">Pode ser! Vou confirmar o pix amanhã</Msg>
+              <Msg side="right" small>✓ Pré-reserva criada · sua agenda atualizada · você foi notificada</Msg>
             </div>
           </div>
         </div>
@@ -56,9 +61,12 @@ function Msg({ children, side, small }: { children: React.ReactNode; side: "left
   const isRight = side === "right";
   return (
     <div className={`flex ${isRight ? "justify-end" : "justify-start"}`}>
-      <div className={`${small ? "text-[10px] italic opacity-80" : "text-xs"} max-w-[80%] px-3 py-2 rounded-2xl ${isRight ? "bg-[#dcf8c6] rounded-tr-sm" : "bg-white rounded-tl-sm"} shadow-sm`}>
+      <div className={`${small ? "text-[10px] italic opacity-80" : "text-xs"} max-w-[85%] px-3 py-2 rounded-2xl ${isRight ? "bg-[#dcf8c6] rounded-tr-sm" : "bg-white rounded-tl-sm"} shadow-sm`}>
         {children}
       </div>
     </div>
   );
 }
+
+// React needs to be in scope for JSX
+import React from "react";

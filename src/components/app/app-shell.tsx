@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { cls } from "@/lib/format";
 import { useAuth } from "@/services/auth/auth-context";
+import { AssistantOrb } from "@/components/app/assistant-orb";
 
 type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean };
 const NAV: NavItem[] = [
@@ -95,6 +96,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className="flex-1 min-w-0 pt-14 lg:pt-0">
         {children}
       </main>
+
+      <AssistantOrb />
     </div>
   );
 }

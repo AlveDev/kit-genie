@@ -1,20 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { LandingHero } from "@/components/landing/landing-hero";
+import { LandingPain } from "@/components/landing/landing-pain";
+import { LandingHow } from "@/components/landing/landing-how";
+import { LandingAudioBot } from "@/components/landing/landing-audio-bot";
 import { LandingBom } from "@/components/landing/landing-bom";
 import { LandingFeatures } from "@/components/landing/landing-features";
 import { LandingWhatsapp } from "@/components/landing/landing-whatsapp";
+import { LandingTestimonials } from "@/components/landing/landing-testimonials";
 import { LandingOffer } from "@/components/landing/landing-offer";
 import { LandingFaq } from "@/components/landing/landing-faq";
 import { LandingFooter } from "@/components/landing/landing-footer";
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: "Pink Love Gestão — Estoque inteligente para decoradoras" },
-      { name: "description", content: "Sistema vitalício de controle financeiro + estoque inteligente para decorações, pegue e monte e locação de brinquedos. Substitua seu SDR." },
-    ],
-  }),
   component: Index,
 });
 
@@ -24,9 +22,13 @@ function Index() {
       <LandingNav />
       <LandingHero />
       <main>
+        <LandingPain />
+        <LandingHow />
+        <LandingAudioBot />
         <LandingBom />
         <LandingFeatures />
         <LandingWhatsapp />
+        <LandingTestimonials />
         <LandingOffer />
         <LandingFaq />
       </main>

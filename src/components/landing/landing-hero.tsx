@@ -10,37 +10,55 @@ export function LandingHero() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-70"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
             </span>
-            <span className="text-xs font-bold uppercase tracking-wider text-primary">Lançamento vitalício</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-primary">Lançamento · Preço de fundação</span>
           </div>
+
           <h1 className="font-display text-5xl md:text-6xl lg:text-7xl leading-[1.05] tracking-tight text-balance">
-            Seu estoque <span className="text-primary italic">inteligente</span>,<br className="hidden md:inline" /> seu tempo de volta.
+            Gerencie suas festas<br className="hidden md:inline" /> <span className="text-primary italic">por voz</span> — sem planilha.
           </h1>
+
           <p className="text-lg text-muted-foreground leading-relaxed max-w-xl text-pretty">
-            Substitua planilhas complexas por um parceiro digital que entende seus kits,
-            reserva peças automaticamente e responde clientes no WhatsApp como uma assistente dedicada.
-            Pensado para decoradoras, pegue-e-monte e locação de brinquedos.
+            Fale um comando e o sistema registra a venda, atualiza o estoque e responde o cliente.
+            Feito para decoradoras de pegue-e-monte, montagem e locação que cansaram de planilha.
           </p>
+
           <div className="flex flex-wrap gap-4 items-center">
             <a
               href="#oferta"
               className="bg-foreground text-background px-7 py-4 rounded-2xl font-bold text-base hover:scale-[1.02] active:scale-[0.99] transition-transform shadow-soft"
             >
-              Quero garantir minha vaga
+              Quero experimentar
             </a>
-            <Link
-              to="/app"
+            <a
+              href="#como-funciona"
               className="px-5 py-4 rounded-2xl font-semibold text-base text-primary-dark hover:bg-primary-soft transition-colors"
             >
-              Testar o sistema →
-            </Link>
-            <div className="flex flex-col justify-center pl-3 border-l border-border">
-              <span className="text-sm font-bold">+30 mil decoradoras</span>
-              <span className="text-xs text-muted-foreground">confiam na metodologia Pink Love</span>
+              Ver como funciona →
+            </a>
+          </div>
+
+          {/* Social proof strip */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 pt-2">
+            <div className="flex items-center gap-3 text-sm">
+              <div className="flex -space-x-2">
+                {["C","M","P","F"].map(l => (
+                  <div key={l} className="size-8 rounded-full bg-primary-soft border-2 border-card grid place-items-center text-xs font-bold text-primary">{l}</div>
+                ))}
+              </div>
+              <div>
+                <div className="flex gap-0.5 text-amber-400 text-xs">★★★★★</div>
+                <span className="text-xs text-muted-foreground">"Registrei 3 vendas sem abrir planilha nenhuma." — Camila R., SP</span>
+              </div>
+            </div>
+            <div className="flex gap-4 text-xs text-muted-foreground">
+              <span>🔒 Pagamento seguro</span>
+              <span>✅ 7 dias de garantia</span>
+              <span>⚡ Acesso imediato</span>
             </div>
           </div>
         </div>
 
-        {/* Dashboard mockup — fiel ao protótipo, sem precisar de imagem */}
+        {/* Dashboard mockup */}
         <div className="relative">
           <div className="absolute -inset-8 bg-primary/15 blur-3xl rounded-full -z-10" />
           <div className="relative rounded-3xl bg-card border border-pink-100 shadow-glow overflow-hidden">
@@ -65,29 +83,18 @@ export function LandingHero() {
                 <div className="text-[11px] text-emerald-600 font-semibold mt-2">fim de semana cheio</div>
               </div>
               <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
-                <div className="text-[10px] font-bold uppercase text-destructive tracking-wider">Estoque crítico</div>
+                <div className="text-[10px] font-bold uppercase text-destructive tracking-wider">Estoque baixo</div>
                 <div className="font-display text-2xl mt-1">3 itens</div>
                 <div className="text-[11px] text-muted-foreground mt-2">balão rosa em 4 kits</div>
               </div>
-              <div className="col-span-2 rounded-2xl border border-border p-4">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-xs font-bold">Próximas montagens</span>
-                  <span className="text-[10px] text-primary font-semibold">ver agenda</span>
+              {/* Assistente orb preview */}
+              <div className="col-span-2 rounded-2xl bg-primary-soft border border-primary/20 p-4 flex items-center gap-3">
+                <div className="size-10 rounded-full bg-primary grid place-items-center shrink-0">
+                  <span className="text-primary-foreground text-sm">✨</span>
                 </div>
-                <div className="space-y-2.5">
-                  {[
-                    { t: "Jardim Encantado", d: "Sáb · 14:00", s: "Separar peças", c: "bg-amber-100 text-amber-700" },
-                    { t: "Pegue e Monte Batman", d: "Dom · 10:00", s: "Pronto", c: "bg-emerald-100 text-emerald-700" },
-                  ].map(r => (
-                    <div key={r.t} className="flex items-center gap-3">
-                      <div className="size-8 rounded-lg bg-primary-soft" />
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs font-semibold truncate">{r.t}</div>
-                        <div className="text-[10px] text-muted-foreground">{r.d}</div>
-                      </div>
-                      <span className={`text-[9px] font-bold px-2 py-1 rounded-full ${r.c}`}>{r.s}</span>
-                    </div>
-                  ))}
+                <div className="flex-1 text-xs">
+                  <div className="font-semibold text-primary-dark mb-0.5">🎤 "Vendi o kit Batman, cliente Joana, dia 22"</div>
+                  <div className="text-muted-foreground">✅ Venda registrada · estoque atualizado · R$ 850</div>
                 </div>
               </div>
             </div>

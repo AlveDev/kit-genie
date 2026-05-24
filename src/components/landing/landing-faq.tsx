@@ -3,13 +3,38 @@ import {
 } from "@/components/ui/accordion";
 
 const QA = [
-  { q: "Preciso saber mexer em tecnologia?", a: "Não. O sistema foi feito justamente para decoradoras que cansaram de planilhas. O onboarding te conduz passo a passo no cadastro dos primeiros kits e componentes." },
-  { q: "Funciona offline no meu galpão?", a: "Sim! Você pode cadastrar componentes, kits e vendas mesmo sem internet. Quando voltar a conectar, tudo sincroniza automaticamente." },
-  { q: "E se eu trabalho com vários temas (Mickey, Batman, princesas...)?", a: "Esse é o ponto forte. Cadastre cada componente UMA vez (ex: cilindro branco) e use ele em quantos kits quiser. O sistema entende a reutilização." },
-  { q: "Como funciona o orçamento automático no WhatsApp?", a: "O controle de estoque + finanças é vitalício. A automação completa do atendimento via WhatsApp é um upgrade opcional de R$ 9,90/mês, contratado à parte — assim você só paga pelo que precisar. Cancele quando quiser." },
-  { q: "Posso exportar meus dados pro contador?", a: "Sim. Exportação em CSV e PDF de vendas, fluxo de caixa, estoque e custos a qualquer momento." },
-  { q: "É realmente vitalício, sem mensalidade?", a: "Sim. Pagamento único na Hotmart, acesso para sempre, com todas as atualizações futuras inclusas." },
-  { q: "Tem garantia?", a: "7 dias de garantia incondicional. Se não amar, devolvemos 100% do valor — sem perguntas." },
+  {
+    q: "Preciso entender de tecnologia pra usar?",
+    a: "Não. O sistema foi criado justamente pra decoradoras que cansaram de planilha. O onboarding te conduz passo a passo no cadastro dos primeiros kits e componentes — se você usa WhatsApp, você usa o Pink Love.",
+  },
+  {
+    q: "Como funciona o assistente por voz?",
+    a: "É um botão de microfone que fica disponível em todas as telas do app. Você clica, fala o comando em português — como 'vendi o kit Mickey, cliente Joana, dia 22' — e o sistema registra automaticamente. Funciona por texto também, sem custo adicional.",
+  },
+  {
+    q: "E se eu trabalhar com 20 temas diferentes?",
+    a: "Esse é exatamente o ponto forte. Cadastre cada componente UMA vez (ex: balão rosa metalizado) e use em quantos kits quiser. O sistema entende a reutilização e avisa quando alguma peça vai faltar.",
+  },
+  {
+    q: "Como funciona o bot de atendimento no WhatsApp?",
+    a: "O controle de estoque, financeiro e o assistente por voz são vitalícios e já estão no plano base. O bot que responde *seus clientes* pelo WhatsApp é um upgrade opcional de R$ 9,90/mês — você só paga se precisar. Cancele quando quiser.",
+  },
+  {
+    q: "Já uso planilha e funciona. Por que mudar?",
+    a: "Planilha não avisa quando vai faltar peça, não bloqueia datas duplicadas e não calcula o lucro real separando custos pessoais dos empresariais. Você sabe quanto ganhou de verdade no último mês? O Pink Love mostra isso com um clique.",
+  },
+  {
+    q: "Posso exportar meus dados pro contador?",
+    a: "Sim. Exportação em CSV e PDF de vendas, fluxo de caixa, estoque e custos a qualquer momento, com um clique.",
+  },
+  {
+    q: "É realmente vitalício, sem mensalidade?",
+    a: "Sim. Pagamento único na Hotmart, acesso para sempre, com todas as atualizações futuras inclusas. Nenhuma cobrança mensal surpresa.",
+  },
+  {
+    q: "Tem garantia?",
+    a: "7 dias de garantia incondicional. Se não amar, devolvemos 100% do valor — sem perguntas, sem burocracia, direto pela Hotmart.",
+  },
 ];
 
 export function LandingFaq() {

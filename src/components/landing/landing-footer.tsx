@@ -9,15 +9,14 @@ export function LandingFooter() {
               <span className="font-bold text-lg">PinkLove <span className="font-light opacity-70">Gestão</span></span>
             </div>
             <p className="text-sm opacity-60 max-w-xs">
-              O parceiro digital de decoradoras que cansaram de planilhas.
-              Substitua seu SDR e foque em criar.
+              Feito por e para decoradoras brasileiras. Gerencie kits, estoque e vendas — tudo por voz ou no app.
             </p>
           </div>
           <div>
             <h4 className="text-xs font-bold uppercase tracking-widest opacity-50 mb-4">Produto</h4>
             <ul className="space-y-2 text-sm">
+              <li><a href="#como-funciona" className="opacity-80 hover:opacity-100">Como funciona</a></li>
               <li><a href="#features" className="opacity-80 hover:opacity-100">Funcionalidades</a></li>
-              <li><a href="#bom" className="opacity-80 hover:opacity-100">Kit Inteligente</a></li>
               <li><a href="#oferta" className="opacity-80 hover:opacity-100">Preço vitalício</a></li>
               <li><a href="#faq" className="opacity-80 hover:opacity-100">Dúvidas</a></li>
             </ul>

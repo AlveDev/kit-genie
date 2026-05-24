@@ -1,24 +1,23 @@
 import { Link } from "@tanstack/react-router";
 
-// Substitua pelas URLs reais ao criar os produtos na Hotmart
 const HOTMART_BASE = import.meta.env.VITE_HOTMART_URL_BASE ?? "https://hotmart.com/produto/pink-love-gestao-base";
 const HOTMART_PREMIUM = import.meta.env.VITE_HOTMART_URL_PREMIUM ?? "https://hotmart.com/produto/pink-love-gestao-premium";
 
 const INCLUSO = [
   "Acesso vitalício ao sistema (sem mensalidade)",
   "Controle ilimitado de kits e componentes",
-  "Dashboard financeiro + fluxo de caixa",
-  "Relatórios semanais por e-mail",
-  "Modo offline (galpão sem internet)",
+  "Assistente por voz/texto nativo no app",
+  "Dashboard financeiro + fluxo de caixa real",
+  "Relatórios semanais por e-mail automático",
   "Exportação CSV / PDF para contador",
-  "Suporte VIP na comunidade Pink Love",
+  "Agenda com bloqueio automático de datas",
   "Todas as atualizações futuras inclusas",
 ];
 
 const UPGRADE_INCLUSO = [
-  "Resposta automática de orçamentos",
-  "Bloqueio de estoque em tempo real",
-  "Atendimento 24h no WhatsApp",
+  "Bot responde clientes 24h no WhatsApp",
+  "Nunca mais cliente sem resposta",
+  "Você só aparece quando a venda está fechada",
 ];
 
 export function LandingOffer() {
@@ -28,11 +27,11 @@ export function LandingOffer() {
         <div className="text-center mb-12">
           <span className="text-xs font-bold uppercase tracking-widest text-primary">Oferta de fundação</span>
           <h2 className="font-display text-4xl md:text-5xl mt-3 mb-5 text-balance">
-            Organização impecável por um <span className="italic text-primary">valor único</span>.
+            Um negócio organizado. <span className="italic text-primary">Para sempre.</span>
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            Esqueça mensalidades infinitas. Entre na primeira turma da comunidade Pink Love
-            e tenha o sistema completo — pra sempre.
+            Enquanto você usa planilha, outras decoradoras já estão com o estoque no automático.
+            Garanta agora com o preço de fundação — sem mensalidade, sem surpresa, sem prazo de validade.
           </p>
         </div>
 
@@ -53,14 +52,15 @@ export function LandingOffer() {
         <div className="grid md:grid-cols-2 gap-6">
           {/* Card Base */}
           <div className="bg-card rounded-3xl p-8 border border-border shadow-soft text-center flex flex-col">
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Pagamento único</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">Pagamento único · vitalício</p>
             <div className="mb-1">
               <span className="text-sm text-muted-foreground line-through font-medium">De R$ 97,00</span>
             </div>
             <div className="font-display text-6xl text-primary mb-1 leading-none">
               <span className="text-2xl align-top mr-1">R$</span>47
             </div>
-            <p className="text-xs text-muted-foreground mb-6 font-medium">acesso vitalício · pagamento único</p>
+            <p className="text-xs text-amber-600 font-semibold mb-1">⏳ Preço de fundação — sobe após as primeiras vagas</p>
+            <p className="text-xs text-muted-foreground mb-6">acesso para sempre · sem mensalidade</p>
             <div className="mt-auto space-y-3">
               <a
                 href={HOTMART_BASE}
@@ -73,9 +73,10 @@ export function LandingOffer() {
               <Link to="/app" className="block text-xs text-primary font-semibold hover:underline">
                 ou explore o sistema antes →
               </Link>
-              <p className="text-[10px] text-muted-foreground tracking-wide">
-                Pagamento seguro Hotmart · 7 dias de garantia incondicional
-              </p>
+              <div className="flex items-center justify-center gap-2 text-[11px] text-muted-foreground">
+                <span>🛡️</span>
+                <span>7 dias de garantia incondicional — 100% do valor de volta, sem perguntas</span>
+              </div>
             </div>
           </div>
 
@@ -84,7 +85,7 @@ export function LandingOffer() {
             <div className="absolute top-4 right-4">
               <span className="text-[9px] font-bold uppercase tracking-widest bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full">Upgrade opcional</span>
             </div>
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">+ Automação WhatsApp</p>
+            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">+ Automação WhatsApp para clientes</p>
             <div className="font-display text-6xl text-emerald-600 mb-1 leading-none">
               <span className="text-2xl align-top mr-1">R$</span>9<span className="text-3xl">,90</span>
             </div>
@@ -109,7 +110,7 @@ export function LandingOffer() {
                 Adicionar automação
               </a>
               <p className="text-[10px] text-muted-foreground tracking-wide">
-                Disponível após ativar o plano base
+                Disponível após ativar o plano base · requer conta Z-API gratuita
               </p>
             </div>
           </div>
