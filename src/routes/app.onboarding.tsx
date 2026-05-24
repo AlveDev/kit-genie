@@ -20,7 +20,7 @@ const WORK_TYPES = [
 function Onboarding() {
   const nav = useNavigate();
   const { user, signUp } = useAuth();
-  const [step, setStep] = React.useState(user ? 1 : 0);
+  const [step, setStep] = React.useState(1);
   const [email, setEmail] = React.useState(user?.email ?? "");
   const [password, setPassword] = React.useState("");
   const [businessName, setBusinessName] = React.useState("");
