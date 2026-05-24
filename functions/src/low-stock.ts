@@ -6,7 +6,7 @@ const db = admin.firestore();
 
 // Dispara ao atualizar um componente — verifica se estoque ficou abaixo do mínimo
 export const onComponentLowStock = functions.onDocumentUpdated(
-  "users/{userId}/components/{componentId}",
+  { document: "users/{userId}/components/{componentId}", region: "us-central1" },
   async (event) => {
     const after = event.data?.after.data() as {
       name: string; stock: number; minStock: number;
