@@ -1,8 +1,8 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Pencil } from "lucide-react";
 import { useDb } from "@/hooks/use-db";
-import { costsRepo, analytics, type CostKind, type CostFrequency } from "@/services/db";
+import { costsRepo, analytics, type CostEntry, type CostKind, type CostFrequency } from "@/services/db";
 import { brl, fmtDate, fmtDateInput, parseDateInput, cls } from "@/lib/format";
 import { PageHeader, Card } from "@/components/app/app-shell";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ function FinancePage() {
     profit: analytics.monthProfit(),
   }));
   const [creating, setCreating] = React.useState(false);
+  const [editing, setEditing] = React.useState<CostEntry | null>(null);
 
   return (
     <div className="p-6 lg:p-10 max-w-7xl mx-auto">
@@ -49,12 +50,12 @@ function FinancePage() {
                 <th className="px-4 py-3">Frequência</th>
                 <th className="px-4 py-3">Data</th>
                 <th className="px-4 py-3 text-right">Valor</th>
-                <th></th>
+                <th className="px-4 py-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {costs.map(c => (
-                <tr key={c.id}>
+                <tr key={c.id} className="hover:bg-surface/50">
                   <td className="px-4 py-3 font-semibold">{c.description}</td>
                   <td className="px-4 py-3"><span className={cls("text-[10px] font-bold uppercase px-2 py-0.5 rounded",
                     c.kind === "profissional" ? "bg-primary-soft text-primary-dark" : "bg-secondary text-secondary-foreground")}>{c.kind}</span></td>
@@ -63,35 +64,58 @@ function FinancePage() {
                   <td className="px-4 py-3">{fmtDate(c.date)}</td>
                   <td className="px-4 py-3 text-right font-mono font-bold text-destructive">- {brl(c.amount)}</td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={() => { if (confirm("Excluir?")) { costsRepo.remove(c.id); toast.success("Excluído"); } }} className="p-1 hover:bg-secondary rounded"><Trash2 className="size-3.5 text-muted-foreground" /></button>
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => setEditing(c)} className="p-1 hover:bg-secondary rounded" title="Editar">
+                        <Pencil className="size-3.5 text-muted-foreground" />
+                      </button>
+                      <button onClick={() => { if (confirm("Excluir?")) { costsRepo.remove(c.id); toast.success("Excluído"); } }} className="p-1 hover:bg-secondary rounded" title="Excluir">
+                        <Trash2 className="size-3.5 text-muted-foreground" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
+              {costs.length === 0 && (
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground text-sm">Nenhum custo lançado ainda.</td></tr>
+              )}
             </tbody>
           </table>
         </div>
       </Card>
 
       {creating && <CostDialog onClose={() => setCreating(false)} />}
+      {editing && <CostDialog cost={editing} onClose={() => setEditing(null)} />}
     </div>
   );
 }
 
-function CostDialog({ onClose }: { onClose: () => void }) {
+function CostDialog({ cost, onClose }: { cost?: CostEntry; onClose: () => void }) {
+  const isEditing = !!cost;
   const [form, setForm] = React.useState({
-    description: "", kind: "profissional" as CostKind, category: "",
-    amount: 0, frequency: "unico" as CostFrequency,
-    date: fmtDateInput(Date.now()),
+    description: cost?.description ?? "",
+    kind: (cost?.kind ?? "profissional") as CostKind,
+    category: cost?.category ?? "",
+    amount: cost?.amount ?? 0,
+    frequency: (cost?.frequency ?? "unico") as CostFrequency,
+    date: fmtDateInput(cost?.date ?? Date.now()),
   });
+
   const save = () => {
     if (!form.description) { toast.error("Descreva o custo"); return; }
-    costsRepo.create({ ...form, date: parseDateInput(form.date) });
-    toast.success("Custo lançado"); onClose();
+    if (isEditing) {
+      costsRepo.update(cost.id, { ...form, date: parseDateInput(form.date) });
+      toast.success("Custo atualizado");
+    } else {
+      costsRepo.create({ ...form, date: parseDateInput(form.date) });
+      toast.success("Custo lançado");
+    }
+    onClose();
   };
+
   return (
     <div onClick={onClose} className="fixed inset-0 bg-black/40 z-50 grid place-items-center p-4">
       <div onClick={e => e.stopPropagation()} className="bg-card rounded-3xl max-w-md w-full p-8">
-        <h2 className="font-display text-2xl mb-6">Novo custo</h2>
+        <h2 className="font-display text-2xl mb-6">{isEditing ? "Editar custo" : "Novo custo"}</h2>
         <div className="space-y-3">
           <F label="Descrição"><input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="inp" /></F>
           <div className="grid grid-cols-2 gap-3">
@@ -113,7 +137,9 @@ function CostDialog({ onClose }: { onClose: () => void }) {
         </div>
         <div className="flex justify-end gap-2 mt-8 pt-6 border-t border-border">
           <button onClick={onClose} className="px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-secondary">Cancelar</button>
-          <button onClick={save} className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary-dark">Salvar</button>
+          <button onClick={save} className="px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:bg-primary-dark">
+            {isEditing ? "Salvar alterações" : "Salvar"}
+          </button>
         </div>
         <style>{`.inp{width:100%;padding:0.5rem 0.75rem;border-radius:0.625rem;border:1px solid var(--border);background:var(--card);font-size:0.875rem}`}</style>
       </div>

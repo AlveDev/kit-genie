@@ -16,10 +16,17 @@ function SettingsPage() {
   const [phone, setPhone] = React.useState(profile?.phone ?? "");
   const [email, setEmail] = React.useState(profile?.email ?? "");
 
+  // WhatsApp Premium state
+  const [zapiInstance, setZapiInstance] = React.useState(profile?.zapiInstance ?? "");
+  const [zapiToken, setZapiToken] = React.useState(profile?.zapiToken ?? "");
+  const [savingWhatsApp, setSavingWhatsApp] = React.useState(false);
+
   React.useEffect(() => {
     if (profile) {
       setBusinessName(profile.businessName); setOwnerName(profile.ownerName);
       setPhone(profile.phone ?? ""); setEmail(profile.email ?? "");
+      setZapiInstance((profile as any).zapiInstance ?? "");
+      setZapiToken((profile as any).zapiToken ?? "");
     }
   }, [profile]);
 
@@ -27,6 +34,17 @@ function SettingsPage() {
     if (!profile) return;
     profileRepo.upsert({ ...profile, businessName, ownerName, phone, email });
     toast.success("Perfil atualizado");
+  };
+
+  const saveWhatsApp = async () => {
+    if (!profile) return;
+    setSavingWhatsApp(true);
+    try {
+      profileRepo.upsert({ ...profile, zapiInstance, zapiToken } as any);
+      toast.success("Configuração WhatsApp salva");
+    } finally {
+      setSavingWhatsApp(false);
+    }
   };
 
   const reset = () => {
@@ -77,11 +95,42 @@ function SettingsPage() {
         </div>
       </Card>
 
+      {/* WhatsApp Premium */}
+      <Card>
+        <div className="flex items-center gap-3 mb-5">
+          <h3 className="font-bold">WhatsApp Premium</h3>
+          <span className="text-[10px] font-bold uppercase tracking-widest bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full">R$ 9,90/mês</span>
+        </div>
+        <p className="text-sm text-muted-foreground mb-5">
+          Conecte seu WhatsApp via <strong>Z-API</strong> para que o bot responda orçamentos e disponibilidade automaticamente.
+          Crie sua conta em <a href="https://z-api.io" target="_blank" rel="noreferrer" className="text-primary underline">z-api.io</a>, crie uma instância e cole os dados abaixo.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <F label="Z-API Instance ID">
+            <input value={zapiInstance} onChange={e => setZapiInstance(e.target.value)} className="inp" placeholder="Ex: 3D1234567890A" />
+          </F>
+          <F label="Z-API Token">
+            <input value={zapiToken} onChange={e => setZapiToken(e.target.value)} className="inp" placeholder="Token da instância" type="password" />
+          </F>
+        </div>
+        <div className="mt-4 p-3 rounded-xl bg-surface border border-border text-xs text-muted-foreground space-y-1">
+          <p><strong>URL do Webhook</strong> — configure no painel Z-API:</p>
+          <code className="font-mono text-xs break-all text-foreground">
+            {`https://us-central1-pink-love-gestao.cloudfunctions.net/whatsappWebhook`}
+          </code>
+        </div>
+        <div className="mt-5 flex justify-end">
+          <button onClick={saveWhatsApp} disabled={savingWhatsApp} className="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-semibold text-sm hover:bg-emerald-700 disabled:opacity-50">
+            {savingWhatsApp ? "Salvando..." : "Ativar bot WhatsApp"}
+          </button>
+        </div>
+      </Card>
+
       <Card>
         <h3 className="font-bold mb-3">Sobre o app</h3>
         <p className="text-sm text-muted-foreground mb-4">
-          Pink Love Gestão · versão 1.0 · seus dados ficam no seu navegador (modo offline).
-          A migração para nuvem (Firebase) está prevista nas próximas atualizações.
+          Pink Love Gestão · versão 1.0 · seus dados são sincronizados em tempo real com a nuvem (Firebase Firestore).
+          Funciona offline — as alterações são salvas localmente e enviadas automaticamente quando a conexão voltar.
         </p>
         <button onClick={reset} className="text-sm text-destructive font-semibold hover:underline">
           Resetar todos os dados (cuidado!)

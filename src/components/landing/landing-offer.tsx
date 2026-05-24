@@ -1,5 +1,9 @@
 import { Link } from "@tanstack/react-router";
 
+// Substitua pelas URLs reais ao criar os produtos na Hotmart
+const HOTMART_BASE = import.meta.env.VITE_HOTMART_URL_BASE ?? "https://hotmart.com/produto/pink-love-gestao-base";
+const HOTMART_PREMIUM = import.meta.env.VITE_HOTMART_URL_PREMIUM ?? "https://hotmart.com/produto/pink-love-gestao-premium";
+
 const INCLUSO = [
   "Acesso vitalício ao sistema (sem mensalidade)",
   "Controle ilimitado de kits e componentes",
@@ -59,8 +63,9 @@ export function LandingOffer() {
             <p className="text-xs text-muted-foreground mb-6 font-medium">acesso vitalício · pagamento único</p>
             <div className="mt-auto space-y-3">
               <a
-                href="https://hotmart.com"
-                target="_blank" rel="noreferrer"
+                href={HOTMART_BASE}
+                target="_blank"
+                rel="noreferrer"
                 className="block w-full rounded-2xl bg-primary text-primary-foreground py-4 font-bold text-base hover:bg-primary-dark transition-colors"
               >
                 Comprar agora na Hotmart
@@ -96,7 +101,9 @@ export function LandingOffer() {
             </ul>
             <div className="mt-auto space-y-3">
               <a
-                href="#"
+                href={HOTMART_PREMIUM}
+                target="_blank"
+                rel="noreferrer"
                 className="block w-full rounded-2xl bg-emerald-600 text-white py-4 font-bold text-base hover:bg-emerald-700 transition-colors"
               >
                 Adicionar automação

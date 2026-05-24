@@ -125,16 +125,48 @@ export const kitsRepo = {
     mutate((db) => { db.kits = db.kits.filter(k => k.id !== id); });
     fsDeleteKit(id).catch((e) => console.error("[db] kit delete sync", e));
   },
-  availability(id: string): { available: boolean; missing: Array<{ componentId: string; name: string; need: number; have: number }> } {
+  // eventDate opcional: quando fornecido, verifica conflito de locação na data
+  availability(id: string, eventDate?: number): { available: boolean; missing: Array<{ componentId: string; name: string; need: number; have: number }> } {
     const db = read();
     const kit = db.kits.find(k => k.id === id);
     if (!kit) return { available: false, missing: [] };
     const missing: Array<{ componentId: string; name: string; need: number; have: number }> = [];
+
+    // Calcula quantos de cada componente reutilizável já estão comprometidos nessa data
+    const committedOnDate = new Map<string, number>();
+    if (eventDate) {
+      const dayStart = startOfDay(eventDate);
+      const dayEnd = dayStart + 86400000;
+      db.sales
+        .filter(s => s.status !== "cancelado" && s.eventDate >= dayStart && s.eventDate < dayEnd)
+        .forEach(s => {
+          const saleKit = db.kits.find(k => k.id === s.kitId);
+          if (saleKit) {
+            saleKit.items.forEach(it => {
+              const comp = db.components.find(c => c.id === it.componentId);
+              if (comp?.reusable) {
+                committedOnDate.set(it.componentId, (committedOnDate.get(it.componentId) ?? 0) + it.quantity);
+              }
+            });
+          }
+        });
+    }
+
     for (const it of kit.items) {
       const c = db.components.find(x => x.id === it.componentId);
       if (!c) { missing.push({ componentId: it.componentId, name: "Componente removido", need: it.quantity, have: 0 }); continue; }
-      if (!c.reusable && c.stock < it.quantity) {
-        missing.push({ componentId: c.id, name: c.name, need: it.quantity, have: c.stock });
+
+      if (!c.reusable) {
+        // Consumível: verifica estoque atual
+        if (c.stock < it.quantity) {
+          missing.push({ componentId: c.id, name: c.name, need: it.quantity, have: c.stock });
+        }
+      } else if (eventDate) {
+        // Reutilizável (locação): verifica conflito na data
+        const committed = committedOnDate.get(c.id) ?? 0;
+        if (c.stock < it.quantity + committed) {
+          missing.push({ componentId: c.id, name: c.name, need: it.quantity + committed, have: c.stock });
+        }
       }
     }
     return { available: missing.length === 0, missing };
@@ -172,15 +204,69 @@ export const salesRepo = {
     return sale;
   },
   updateStatus(id: string, status: Sale["status"]): void {
+    const sale = read().sales.find(s => s.id === id);
+    if (!sale) return;
+    const prevStatus = sale.status;
+    const updatedComponents: Component[] = [];
+
     mutate((db) => {
       const s = db.sales.find(s => s.id === id);
-      if (s) s.status = status;
+      if (!s) return;
+      s.status = status;
+
+      const kit = db.kits.find(k => k.id === s.kitId);
+      if (!kit) return;
+
+      if (status === "cancelado" && prevStatus !== "cancelado") {
+        // Restaura estoque ao cancelar
+        for (const it of kit.items) {
+          const c = db.components.find(x => x.id === it.componentId);
+          if (c && !c.reusable) {
+            c.stock += it.quantity;
+            c.updatedAt = Date.now();
+            updatedComponents.push({ ...c });
+          }
+        }
+      } else if (prevStatus === "cancelado" && status !== "cancelado") {
+        // Reativa venda cancelada: deduz novamente
+        for (const it of kit.items) {
+          const c = db.components.find(x => x.id === it.componentId);
+          if (c && !c.reusable) {
+            c.stock = Math.max(0, c.stock - it.quantity);
+            c.updatedAt = Date.now();
+            updatedComponents.push({ ...c });
+          }
+        }
+      }
     });
+
     fsUpdateSaleStatus(id, status).catch((e) => console.error("[db] sale status sync", e));
+    updatedComponents.forEach(c => fsSetComponent(c).catch((e) => console.error("[db] stock sync on status change", e)));
   },
   remove(id: string): void {
-    mutate((db) => { db.sales = db.sales.filter(s => s.id !== id); });
+    const sale = read().sales.find(s => s.id === id);
+    const updatedComponents: Component[] = [];
+
+    mutate((db) => {
+      db.sales = db.sales.filter(s => s.id !== id);
+      // Restaura estoque se a venda não estava cancelada
+      if (sale && sale.status !== "cancelado") {
+        const kit = db.kits.find(k => k.id === sale.kitId);
+        if (kit) {
+          for (const it of kit.items) {
+            const c = db.components.find(x => x.id === it.componentId);
+            if (c && !c.reusable) {
+              c.stock += it.quantity;
+              c.updatedAt = Date.now();
+              updatedComponents.push({ ...c });
+            }
+          }
+        }
+      }
+    });
+
     fsDeleteSale(id).catch((e) => console.error("[db] sale delete sync", e));
+    updatedComponents.forEach(c => fsSetComponent(c).catch((e) => console.error("[db] stock restore on delete sync", e)));
   },
 };
 
@@ -192,6 +278,17 @@ export const costsRepo = {
     mutate((db) => { db.costs.push(c); });
     fsSetCost(c).catch((e) => console.error("[db] cost create sync", e));
     return c;
+  },
+  update(id: string, patch: Partial<Omit<CostEntry, "id" | "createdAt">>): void {
+    let updated!: CostEntry;
+    mutate((db) => {
+      const i = db.costs.findIndex(c => c.id === id);
+      if (i >= 0) {
+        db.costs[i] = { ...db.costs[i], ...patch };
+        updated = db.costs[i];
+      }
+    });
+    if (updated) fsSetCost(updated).catch((e) => console.error("[db] cost update sync", e));
   },
   remove(id: string): void {
     mutate((db) => { db.costs = db.costs.filter(c => c.id !== id); });
@@ -266,6 +363,12 @@ export const analytics = {
 function startOfMonth(offset = 0): number {
   const d = new Date();
   d.setMonth(d.getMonth() + offset, 1);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function startOfDay(ts: number): number {
+  const d = new Date(ts);
   d.setHours(0, 0, 0, 0);
   return d.getTime();
 }
