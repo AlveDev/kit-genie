@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Check, Sparkles } from "lucide-react";
+import { Check, Sparkles, ArrowRight, ArrowLeft, Star, Package, Calendar, TrendingUp } from "lucide-react";
 import { profileRepo } from "@/services/db";
 import { cls } from "@/lib/format";
 import { useAuth } from "@/services/auth/auth-context";
@@ -8,198 +8,600 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/onboarding")({
   component: Onboarding,
+  // Protege a rota — redireciona para onboarding se perfil incompleto
+  beforeLoad: ({ context }) => {
+    const profile = profileRepo.get();
+    if (profile?.onboardingCompleted) {
+      throw new Error("redirect:/app");
+    }
+  },
 });
 
-const THEMES = ["Mickey", "Minnie", "Batman", "Princesas", "Safari", "Jardim", "Astronauta", "Dinossauros", "Frozen", "Unicórnio", "Bailarina", "Carrinhos", "Personalizado"];
+const THEMES = [
+  "Mickey", "Minnie", "Batman", "Princesas", "Safari",
+  "Jardim", "Astronauta", "Dinossauros", "Frozen", "Unicórnio",
+  "Bailarina", "Carrinhos", "Fundo do Mar", "Floresta", "Circo",
+  "Super Heróis", "Boho", "Tropical", "Personalizado",
+];
+
 const WORK_TYPES = [
-  { v: "decoracao", label: "Decoração montada", desc: "Você monta no local do evento" },
-  { v: "pegue_monte", label: "Pegue e monte", desc: "Cliente retira o kit pronto" },
-  { v: "locacao", label: "Locação de itens", desc: "Aluga peças e brinquedos" },
+  {
+    v: "decoracao",
+    label: "Decoração montada",
+    desc: "Você vai até o local do evento e monta tudo na hora.",
+    emoji: "🎪",
+  },
+  {
+    v: "pegue_monte",
+    label: "Pegue e monte",
+    desc: "Cliente vem buscar o kit e monta em casa. Prático e sem deslocamento.",
+    emoji: "📦",
+  },
+  {
+    v: "locacao",
+    label: "Locação de itens",
+    desc: "Você aluga peças, cenários ou brinquedos e recebe de volta depois.",
+    emoji: "🔄",
+  },
 ] as const;
 
+/* ─── Dados do painel esquerdo por step ────────────────────── */
+const PANELS = [
+  {
+    accent: "#F9A8C9",
+    bg: "from-pink-100 to-rose-50",
+    emoji: "✨",
+    headline: "Seu ateliê merece um sistema à altura",
+    sub: "Em menos de 2 minutos você terá controle total de kits, estoque e vendas.",
+    items: ["Cadastro gratuito", "Dados na nuvem", "Funciona no celular"],
+  },
+  {
+    accent: "#FBC4AB",
+    bg: "from-orange-100 to-amber-50",
+    emoji: "🎀",
+    headline: "Conta pra gente sobre seu negócio",
+    sub: "Essas informações aparecem nos seus relatórios e no resumo semanal.",
+    items: ["Nome personalizado", "WhatsApp integrado", "Relatório no seu e-mail"],
+  },
+  {
+    accent: "#C9B8F5",
+    bg: "from-violet-100 to-purple-50",
+    emoji: "🎨",
+    headline: "Cada tema vira um kit no sistema",
+    sub: "Você cadastra os materiais de cada tema e o estoque é descontado automaticamente.",
+    items: ["Kits com lista de materiais", "Estoque automático", "Sem planilha"],
+  },
+  {
+    accent: "#A8D8C2",
+    bg: "from-emerald-100 to-teal-50",
+    emoji: "🗓️",
+    headline: "Do orçamento à entrega, tudo registrado",
+    sub: "Cada tipo de serviço tem um fluxo diferente — o sistema se adapta ao seu jeito de trabalhar.",
+    items: ["Agenda visual", "Status de cada venda", "Histórico completo"],
+  },
+  {
+    accent: "#F9A8C9",
+    bg: "from-pink-100 to-fuchsia-50",
+    emoji: "🎉",
+    headline: "Você está pronta para começar!",
+    sub: "Seu sistema já vem com exemplos para você explorar antes de cadastrar os seus dados.",
+    items: ["4 kits de exemplo", "10 componentes pré-cadastrados", "Dashboard com dados reais"],
+  },
+];
+
+/* ─── Componente principal ──────────────────────────────────── */
 function Onboarding() {
   const nav = useNavigate();
   const { user, signUp } = useAuth();
-  const [step, setStep] = React.useState(1);
-  const [email, setEmail] = React.useState(user?.email ?? "");
-  const [password, setPassword] = React.useState("");
+  const [step, setStep]   = React.useState(user ? 1 : 0);
+  const [dir,  setDir]    = React.useState<1 | -1>(1); // direção da animação
+  const [animKey, setAnimKey] = React.useState(0);
+
+  // Form state
+  const [email,        setEmail]        = React.useState(user?.email ?? "");
+  const [password,     setPassword]     = React.useState("");
+  const [confirmPass,  setConfirmPass]  = React.useState("");
   const [businessName, setBusinessName] = React.useState("");
-  const [ownerName, setOwnerName] = React.useState(user?.name ?? "");
-  const [phone, setPhone] = React.useState("");
-  const [themes, setThemes] = React.useState<string[]>([]);
-  const [workTypes, setWorkTypes] = React.useState<Array<"decoracao" | "pegue_monte" | "locacao">>([]);
+  const [ownerName,    setOwnerName]    = React.useState(user?.name ?? "");
+  const [phone,        setPhone]        = React.useState("");
+  const [themes,       setThemes]       = React.useState<string[]>([]);
+  const [workTypes,    setWorkTypes]    = React.useState<Array<"decoracao" | "pegue_monte" | "locacao">>([]);
+  const [loading,      setLoading]      = React.useState(false);
+  const [errors,       setErrors]       = React.useState<Record<string, string>>({});
 
-  const toggle = <T,>(arr: T[], v: T) => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
+  const TOTAL = PANELS.length; // 5 steps (0–4)
+  const panel = PANELS[step];
 
-  const steps = ["Conta", "Negócio", "Temas", "Como você trabalha", "Pronto!"];
+  const goTo = (next: number) => {
+    setDir(next > step ? 1 : -1);
+    setAnimKey(k => k + 1);
+    setStep(next);
+    setErrors({});
+  };
+
+  const toggle = <T,>(arr: T[], v: T): T[] =>
+    arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
+
+  /* ── Validações ── */
+  const validateStep0 = () => {
+    const e: Record<string, string> = {};
+    if (!ownerName.trim())          e.ownerName = "Por favor, diga seu nome.";
+    if (!email.includes("@"))       e.email = "Digite um e-mail válido.";
+    if (password.length < 6)        e.password = "A senha precisa ter pelo menos 6 caracteres.";
+    if (password !== confirmPass)   e.confirmPass = "As senhas não coincidem.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const validateStep1 = () => {
+    const e: Record<string, string> = {};
+    if (!businessName.trim()) e.businessName = "Coloque o nome do seu negócio para continuar.";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  /* ── Ações de navegação ── */
+  const handleStep0 = async () => {
+    if (!validateStep0()) return;
+    setLoading(true);
+    try {
+      await signUp(email, password, ownerName);
+      goTo(1);
+    } catch (err: any) {
+      setErrors({ email: err?.message ?? "Erro ao criar conta. Tente novamente." });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const finish = () => {
     profileRepo.upsert({
       businessName: businessName || "Meu Ateliê",
       ownerName: ownerName || user?.name || "Decoradora",
-      phone, email: user?.email,
-      themes, workTypes,
+      phone,
+      email: user?.email,
+      themes,
+      workTypes,
       onboardingCompleted: true,
     });
-    toast.success("Tudo pronto! Bem-vinda ao Pink Love 💕");
+    toast.success("Bem-vinda ao Pink Love Gestão! 💕");
     nav({ to: "/app" });
   };
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] lg:min-h-screen flex items-center justify-center p-6 bg-soft-grain">
-      <div className="w-full max-w-2xl">
-        {/* progress */}
-        <div className="flex gap-2 mb-8">
-          {steps.map((_, i) => (
-            <div key={i} className={cls("h-1.5 flex-1 rounded-full transition-colors",
-              i <= step ? "bg-primary" : "bg-border")} />
-          ))}
+    <div className="min-h-screen flex flex-col lg:flex-row overflow-hidden bg-white">
+
+      {/* ── Painel esquerdo (visual) ─────────────────────────── */}
+      <div
+        className={cls("relative lg:w-[42%] lg:min-h-screen flex flex-col justify-between p-8 lg:p-12 overflow-hidden bg-gradient-to-br transition-all duration-700", panel.bg)}
+        key={`panel-${step}`}
+      >
+        {/* Decoração de fundo */}
+        <BgDecorations step={step} />
+
+        {/* Logo */}
+        <div className="relative z-10 flex items-center gap-2">
+          <div className="size-8 rounded-xl bg-white/80 backdrop-blur grid place-items-center shadow-sm">
+            <Sparkles className="size-4" style={{ color: panel.accent }} />
+          </div>
+          <span className="font-bold text-gray-800 text-sm tracking-wide">Pink Love Gestão</span>
         </div>
 
-        <div className="bg-card border border-border rounded-3xl p-8 md:p-10 shadow-soft">
-          <div className="flex items-center gap-2 mb-2">
-            <Sparkles className="size-4 text-primary" />
-            <span className="text-xs font-bold uppercase tracking-widest text-primary">Passo {step + 1} de {steps.length}</span>
+        {/* Conteúdo central */}
+        <div className="relative z-10 space-y-6 py-12 lg:py-0">
+          <div
+            key={`emoji-${step}`}
+            className="text-6xl"
+            style={{ animation: "popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)" }}
+          >
+            {panel.emoji}
           </div>
+          <div key={`text-${step}`} style={{ animation: "fadeUp 0.4s ease" }}>
+            <h2 className="font-display text-2xl lg:text-3xl font-bold text-gray-800 leading-tight mb-3">
+              {panel.headline}
+            </h2>
+            <p className="text-gray-600 text-sm leading-relaxed">{panel.sub}</p>
+          </div>
+          <ul className="space-y-2.5" key={`items-${step}`} style={{ animation: "fadeUp 0.5s ease 0.1s both" }}>
+            {panel.items.map(item => (
+              <li key={item} className="flex items-center gap-2.5 text-sm text-gray-700">
+                <span
+                  className="size-5 rounded-full flex items-center justify-center shrink-0"
+                  style={{ background: panel.accent + "40" }}
+                >
+                  <Check className="size-3" style={{ color: panel.accent.replace("9", "6") }} />
+                </span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
 
+        {/* Progress dots */}
+        <div className="relative z-10 flex gap-2">
+          {PANELS.map((_, i) => (
+            <div
+              key={i}
+              className="h-1.5 rounded-full transition-all duration-500"
+              style={{
+                background: i === step ? panel.accent : panel.accent + "40",
+                width: i === step ? "2rem" : "0.5rem",
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* ── Painel direito (formulário) ──────────────────────── */}
+      <div className="flex-1 flex flex-col justify-center p-8 lg:p-16 xl:p-24 overflow-y-auto">
+        <div
+          key={`form-${animKey}`}
+          className="w-full max-w-md mx-auto"
+          style={{ animation: "slideIn 0.35s ease" }}
+        >
+          {/* Step label */}
+          <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-6">
+            Passo {step + 1} de {TOTAL}
+          </p>
+
+          {/* ── Step 0: Criar conta ─────────────────────────── */}
           {step === 0 && (
-            <Step title="Vamos criar sua conta" subtitle="É rapidinho — só precisamos do básico.">
-              <Field label="Seu nome">
-                <input value={ownerName} onChange={e => setOwnerName(e.target.value)} className="input" placeholder="Como você se chama?" />
+            <StepShell
+              title="Vamos criar sua conta"
+              subtitle="É rapidinho — só precisamos do básico para começar."
+            >
+              <Field label="Como você se chama?" error={errors.ownerName}>
+                <input
+                  value={ownerName}
+                  onChange={e => setOwnerName(e.target.value)}
+                  className="inp"
+                  placeholder="Seu nome completo"
+                  autoFocus
+                />
               </Field>
-              <Field label="E-mail">
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="input" placeholder="seu@email.com" />
+              <Field label="Seu e-mail" error={errors.email}>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  className="inp"
+                  placeholder="seu@email.com"
+                />
               </Field>
-              <Field label="Senha">
-                <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="input" placeholder="mínimo 6 caracteres" />
-              </Field>
-              <Actions>
-                <button
-                  disabled={!email || !password || !ownerName}
-                  onClick={async () => { await signUp(email, password, ownerName); setStep(1); }}
-                  className="btn-primary"
-                >Continuar</button>
-              </Actions>
-            </Step>
-          )}
-
-          {step === 1 && (
-            <Step title={`Olá, ${ownerName || "querida"} 💕`} subtitle="Conta um pouco sobre o seu ateliê.">
-              <Field label="Nome do seu negócio">
-                <input value={businessName} onChange={e => setBusinessName(e.target.value)} className="input" placeholder="ex: Festa & Cia Decorações" />
-              </Field>
-              <Field label="WhatsApp (opcional)">
-                <input value={phone} onChange={e => setPhone(e.target.value)} className="input" placeholder="(11) 99999-9999" />
-              </Field>
-              <Actions onBack={() => setStep(0)}>
-                <button disabled={!businessName} onClick={() => setStep(2)} className="btn-primary">Continuar</button>
-              </Actions>
-            </Step>
-          )}
-
-          {step === 2 && (
-            <Step title="Com quais temas você trabalha?" subtitle="Selecione todos que se aplicam — pode adicionar mais depois.">
-              <div className="flex flex-wrap gap-2 max-h-72 overflow-y-auto p-1">
-                {THEMES.map(t => (
-                  <button key={t} type="button" onClick={() => setThemes(prev => toggle(prev, t))}
-                    className={cls("px-4 py-2 rounded-full text-sm font-medium border transition-colors",
-                      themes.includes(t) ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:border-primary/50")}>
-                    {t}
-                  </button>
-                ))}
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Senha" error={errors.password}>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    className="inp"
+                    placeholder="mín. 6 caracteres"
+                  />
+                </Field>
+                <Field label="Confirmar senha" error={errors.confirmPass}>
+                  <input
+                    type="password"
+                    value={confirmPass}
+                    onChange={e => setConfirmPass(e.target.value)}
+                    className="inp"
+                    placeholder="repita a senha"
+                    onKeyDown={e => e.key === "Enter" && handleStep0()}
+                  />
+                </Field>
               </div>
-              <Actions onBack={() => setStep(1)}>
-                <button onClick={() => setStep(3)} className="btn-primary">Continuar</button>
-              </Actions>
-            </Step>
+              <NavBar
+                next={{ label: loading ? "Criando conta…" : "Criar conta", onClick: handleStep0, disabled: loading }}
+              />
+              <p className="text-center text-xs text-muted-foreground mt-4">
+                Já tem conta?{" "}
+                <a href="/login" className="text-primary font-semibold hover:underline">Entrar</a>
+              </p>
+            </StepShell>
           )}
 
+          {/* ── Step 1: Sobre o negócio ─────────────────────── */}
+          {step === 1 && (
+            <StepShell
+              title={`Olá, ${ownerName.split(" ")[0] || "querida"} 💕`}
+              subtitle="Conta um pouco sobre o seu ateliê de decoração."
+            >
+              <Field label="Nome do seu negócio" error={errors.businessName} hint='Ex: "Festa em Flor Decorações" ou "Ateliê da Ana"'>
+                <input
+                  value={businessName}
+                  onChange={e => setBusinessName(e.target.value)}
+                  className="inp"
+                  placeholder="Nome que vai aparecer nos relatórios"
+                  autoFocus
+                  onKeyDown={e => e.key === "Enter" && validateStep1() && goTo(2)}
+                />
+              </Field>
+              <Field label="WhatsApp (opcional)" hint="Usado para o bot de atendimento automático">
+                <input
+                  value={phone}
+                  onChange={e => setPhone(e.target.value)}
+                  className="inp"
+                  placeholder="(11) 99999-9999"
+                />
+              </Field>
+              <NavBar
+                back={{ onClick: () => goTo(0) }}
+                next={{ label: "Continuar", onClick: () => validateStep1() && goTo(2) }}
+              />
+            </StepShell>
+          )}
+
+          {/* ── Step 2: Temas ────────────────────────────────── */}
+          {step === 2 && (
+            <StepShell
+              title="Com quais temas você trabalha?"
+              subtitle="Selecione os temas do seu ateliê. Você pode editar isso depois."
+            >
+              <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto pr-1 -mr-1">
+                {THEMES.map(t => {
+                  const active = themes.includes(t);
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setThemes(prev => toggle(prev, t))}
+                      className={cls(
+                        "px-3.5 py-1.5 rounded-full text-sm font-medium border-2 transition-all",
+                        active
+                          ? "bg-primary text-primary-foreground border-primary scale-105 shadow-sm"
+                          : "bg-card border-border text-foreground hover:border-primary/40 hover:bg-primary/5"
+                      )}
+                    >
+                      {active && <Check className="size-3 inline mr-1 -mt-0.5" />}
+                      {t}
+                    </button>
+                  );
+                })}
+              </div>
+              {themes.length > 0 && (
+                <p className="text-xs text-primary font-semibold">
+                  ✓ {themes.length} tema{themes.length !== 1 ? "s" : ""} selecionado{themes.length !== 1 ? "s" : ""}
+                </p>
+              )}
+              <NavBar
+                back={{ onClick: () => goTo(1) }}
+                next={{ label: "Continuar", onClick: () => goTo(3) }}
+              />
+            </StepShell>
+          )}
+
+          {/* ── Step 3: Tipo de trabalho ──────────────────────── */}
           {step === 3 && (
-            <Step title="Como você trabalha?" subtitle="Marque tudo que faz parte do seu serviço.">
+            <StepShell
+              title="Como você trabalha?"
+              subtitle="Marque tudo que faz parte do seu serviço. Pode ser mais de um."
+            >
               <div className="space-y-3">
                 {WORK_TYPES.map(wt => {
                   const active = workTypes.includes(wt.v);
                   return (
-                    <button key={wt.v} type="button" onClick={() => setWorkTypes(prev => toggle(prev, wt.v))}
-                      className={cls("w-full text-left p-4 rounded-2xl border transition-all flex items-start gap-3",
-                        active ? "border-primary bg-primary-soft" : "border-border hover:border-primary/40")}>
-                      <div className={cls("size-5 rounded-md grid place-items-center shrink-0 mt-0.5",
-                        active ? "bg-primary text-primary-foreground" : "border border-border")}>
-                        {active && <Check className="size-3.5" />}
+                    <button
+                      key={wt.v}
+                      type="button"
+                      onClick={() => setWorkTypes(prev => toggle(prev, wt.v))}
+                      className={cls(
+                        "w-full text-left p-4 rounded-2xl border-2 transition-all flex items-start gap-4",
+                        active
+                          ? "border-primary bg-primary/5 shadow-sm"
+                          : "border-border hover:border-primary/30 hover:bg-surface"
+                      )}
+                    >
+                      <span className="text-2xl shrink-0 mt-0.5">{wt.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className={cls("font-semibold text-sm", active ? "text-primary" : "")}>{wt.label}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{wt.desc}</div>
                       </div>
-                      <div>
-                        <div className="font-semibold">{wt.label}</div>
-                        <div className="text-xs text-muted-foreground">{wt.desc}</div>
+                      <div className={cls(
+                        "size-5 rounded-full border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all",
+                        active ? "bg-primary border-primary" : "border-border"
+                      )}>
+                        {active && <Check className="size-3 text-white" />}
                       </div>
                     </button>
                   );
                 })}
               </div>
-              <Actions onBack={() => setStep(2)}>
-                <button disabled={workTypes.length === 0} onClick={() => setStep(4)} className="btn-primary">Continuar</button>
-              </Actions>
-            </Step>
+              <NavBar
+                back={{ onClick: () => goTo(2) }}
+                next={{
+                  label: "Continuar",
+                  onClick: () => workTypes.length > 0 ? goTo(4) : setErrors({ workTypes: "Selecione pelo menos um tipo de serviço." }),
+                }}
+              />
+              {errors.workTypes && <p className="text-xs text-destructive text-center -mt-2">{errors.workTypes}</p>}
+            </StepShell>
           )}
 
+          {/* ── Step 4: Tudo pronto ───────────────────────────── */}
           {step === 4 && (
-            <Step title="Tudo pronto! 🎉" subtitle="Seu sistema já vem com alguns kits de exemplo para você explorar antes de cadastrar os seus.">
-              <ul className="space-y-2 text-sm">
+            <StepShell
+              title="Tudo pronto! 🎉"
+              subtitle="Seu sistema está configurado e pronto para usar. Veja o que já vem cadastrado para te ajudar:"
+            >
+              <div className="space-y-3">
                 {[
-                  "4 kits de exemplo cadastrados (Mickey, Batman, Jardim, Locação)",
-                  "10 componentes pré-cadastrados com estoque inicial",
-                  "Vendas de exemplo para ver o dashboard em ação",
-                  "Você pode resetar tudo nas Configurações quando quiser",
-                ].map(t => (
-                  <li key={t} className="flex gap-2"><Check className="size-4 text-emerald-500 shrink-0 mt-0.5" /> {t}</li>
+                  { icon: <Package className="size-4" />,   color: "pink",    text: "4 kits de exemplo (Mickey, Batman, Jardim, Locação)" },
+                  { icon: <Star className="size-4" />,      color: "violet",  text: "10 componentes pré-cadastrados com estoque inicial" },
+                  { icon: <Calendar className="size-4" />,  color: "blue",    text: "Vendas de exemplo para ver o dashboard em ação" },
+                  { icon: <TrendingUp className="size-4" />,color: "emerald", text: "Relatórios e metas funcionando desde o primeiro dia" },
+                ].map((item, i) => (
+                  <div
+                    key={i}
+                    className={cls(
+                      "flex items-center gap-3 p-3 rounded-xl border",
+                      item.color === "pink"    ? "bg-pink-50 border-pink-100 text-pink-700"    :
+                      item.color === "violet"  ? "bg-violet-50 border-violet-100 text-violet-700" :
+                      item.color === "blue"    ? "bg-blue-50 border-blue-100 text-blue-700"    :
+                      "bg-emerald-50 border-emerald-100 text-emerald-700"
+                    )}
+                    style={{ animation: `fadeUp 0.4s ease ${i * 0.08}s both` }}
+                  >
+                    <span className="shrink-0 opacity-70">{item.icon}</span>
+                    <span className="text-sm font-medium">{item.text}</span>
+                  </div>
                 ))}
-              </ul>
-              <Actions onBack={() => setStep(3)}>
-                <button onClick={finish} className="btn-primary">Entrar no sistema →</button>
-              </Actions>
-            </Step>
+              </div>
+              <p className="text-xs text-muted-foreground bg-surface border border-border rounded-xl p-3 leading-relaxed">
+                💡 Você pode apagar os dados de exemplo a qualquer momento em <strong>Configurações → Sobre o app</strong>.
+              </p>
+              <NavBar
+                back={{ onClick: () => goTo(3) }}
+                next={{
+                  label: "Entrar no meu sistema →",
+                  onClick: finish,
+                  highlight: true,
+                }}
+              />
+            </StepShell>
           )}
         </div>
       </div>
 
+      {/* ── Estilos globais + animações ──────────────────────── */}
       <style>{`
-        .input { width: 100%; padding: 0.625rem 0.875rem; border-radius: 0.75rem; border: 1px solid var(--border); background: var(--card); font-size: 0.875rem; transition: border-color 0.15s; }
-        .input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 18%, transparent); }
-        .btn-primary { padding: 0.625rem 1.25rem; border-radius: 0.75rem; background: var(--primary); color: var(--primary-foreground); font-weight: 600; font-size: 0.875rem; transition: background 0.15s; }
-        .btn-primary:hover:not(:disabled) { background: var(--primary-dark); }
-        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-ghost { padding: 0.625rem 1rem; border-radius: 0.75rem; color: var(--muted-foreground); font-weight: 600; font-size: 0.875rem; }
-        .btn-ghost:hover { background: var(--secondary); }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateX(24px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes popIn {
+          from { opacity: 0; transform: scale(0.5) rotate(-10deg); }
+          to   { opacity: 1; transform: scale(1) rotate(0deg); }
+        }
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50%       { transform: translateY(-12px) rotate(5deg); }
+        }
+        @keyframes floatAlt {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50%       { transform: translateY(-8px) rotate(-4deg); }
+        }
+        .inp {
+          width: 100%;
+          padding: 0.625rem 0.875rem;
+          border-radius: 0.75rem;
+          border: 1.5px solid var(--border);
+          background: var(--card);
+          font-size: 0.9rem;
+          transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        .inp:focus {
+          outline: none;
+          border-color: var(--primary);
+          box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 15%, transparent);
+        }
+        .inp::placeholder { color: var(--muted-foreground); opacity: 0.6; }
       `}</style>
     </div>
   );
 }
 
-function Step({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+/* ─── Decorações de fundo do painel esquerdo ────────────────── */
+function BgDecorations({ step }: { step: number }) {
+  const shapes = [
+    { size: 120, top: "8%",  right: "-5%",  delay: "0s",    opacity: 0.25, shape: "circle" },
+    { size: 80,  top: "55%", right: "10%",  delay: "0.5s",  opacity: 0.2,  shape: "circle" },
+    { size: 60,  top: "30%", left:  "-3%",  delay: "1s",    opacity: 0.15, shape: "square" },
+    { size: 40,  top: "75%", left:  "15%",  delay: "0.3s",  opacity: 0.2,  shape: "circle" },
+    { size: 160, bottom: "5%", right: "-8%", delay: "0.8s", opacity: 0.12, shape: "circle" },
+  ];
+
   return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="font-display text-3xl tracking-tight">{title}</h2>
-        {subtitle && <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>}
-      </div>
-      {children}
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {shapes.map((s, i) => (
+        <div
+          key={`${step}-${i}`}
+          className="absolute rounded-full"
+          style={{
+            width: s.size,
+            height: s.size,
+            top: s.top,
+            bottom: (s as any).bottom,
+            left: s.left,
+            right: s.right,
+            background: "white",
+            opacity: s.opacity,
+            borderRadius: s.shape === "square" ? "24px" : "50%",
+            animation: `${i % 2 === 0 ? "float" : "floatAlt"} ${3 + i * 0.7}s ease-in-out infinite`,
+            animationDelay: s.delay,
+          }}
+        />
+      ))}
     </div>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+/* ─── Shell de cada step ────────────────────────────────────── */
+function StepShell({ title, subtitle, children }: {
+  title: string; subtitle: string; children: React.ReactNode;
+}) {
   return (
-    <label className="block">
-      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1.5 block">{label}</span>
-      {children}
-    </label>
+    <div className="space-y-6">
+      <div style={{ animation: "fadeUp 0.35s ease" }}>
+        <h1 className="font-display text-3xl font-bold leading-tight tracking-tight">{title}</h1>
+        <p className="text-muted-foreground text-sm mt-2 leading-relaxed">{subtitle}</p>
+      </div>
+      <div className="space-y-4" style={{ animation: "fadeUp 0.4s ease 0.05s both" }}>
+        {children}
+      </div>
+    </div>
   );
 }
 
-function Actions({ children, onBack }: { children: React.ReactNode; onBack?: () => void }) {
+/* ─── Campo de formulário ───────────────────────────────────── */
+function Field({ label, hint, error, children }: {
+  label: string; hint?: string; error?: string; children: React.ReactNode;
+}) {
   return (
-    <div className="flex justify-between items-center pt-4">
-      {onBack ? <button onClick={onBack} className="btn-ghost">← Voltar</button> : <span />}
+    <div className="space-y-1.5">
+      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground block">
+        {label}
+      </label>
       {children}
+      {hint && !error && <p className="text-[11px] text-muted-foreground leading-relaxed">{hint}</p>}
+      {error && <p className="text-[11px] text-destructive font-medium">{error}</p>}
+    </div>
+  );
+}
+
+/* ─── Barra de navegação ────────────────────────────────────── */
+function NavBar({ back, next }: {
+  back?: { onClick: () => void };
+  next?: { label: string; onClick: () => void; disabled?: boolean; highlight?: boolean };
+}) {
+  return (
+    <div className="flex items-center justify-between pt-2">
+      {back ? (
+        <button
+          onClick={back.onClick}
+          className="flex items-center gap-1.5 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors px-3 py-2 rounded-xl hover:bg-surface"
+        >
+          <ArrowLeft className="size-3.5" /> Voltar
+        </button>
+      ) : <span />}
+      {next && (
+        <button
+          onClick={next.onClick}
+          disabled={next.disabled}
+          className={cls(
+            "flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-all",
+            next.highlight
+              ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-lg hover:-translate-y-0.5"
+              : "bg-primary text-primary-foreground hover:bg-primary/90",
+            next.disabled ? "opacity-50 cursor-not-allowed" : ""
+          )}
+        >
+          {next.label}
+          {!next.disabled && <ArrowRight className="size-3.5" />}
+        </button>
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 // Escrita: atualiza cache imediatamente + persiste no Firestore em background.
 
 import type {
-  Component, CostEntry, DbSchema, Kit, Profile, Sale, Settings,
+  Component, CostEntry, DbSchema, Kit, KitTierName, Profile, Sale, Settings,
 } from "./types";
 import {
   loadDb, notify, subscribe,
@@ -85,7 +85,6 @@ export const componentsRepo = {
       db.kits.forEach(k => { k.items = k.items.filter(it => it.componentId !== id); });
     });
     fsDeleteComponent(id).catch((e) => console.error("[db] component delete sync", e));
-    // Atualiza kits afetados no Firestore
     read().kits
       .filter(k => k.items.some(it => it.componentId !== id))
       .forEach(k => fsSetKit(k).catch((e) => console.error("[db] kit update after component delete", e)));
@@ -125,24 +124,52 @@ export const kitsRepo = {
     mutate((db) => { db.kits = db.kits.filter(k => k.id !== id); });
     fsDeleteKit(id).catch((e) => console.error("[db] kit delete sync", e));
   },
-  // eventDate opcional: quando fornecido, verifica conflito de locação na data
-  availability(id: string, eventDate?: number): { available: boolean; missing: Array<{ componentId: string; name: string; need: number; have: number }> } {
+
+  /**
+   * Verifica disponibilidade de um kit numa data.
+   * @param id        ID do kit
+   * @param eventDate Timestamp do evento (opcional — verifica conflito de locação)
+   * @param tierName  Tier selecionado (opcional — usa BOM do tier em vez do BOM base)
+   */
+  availability(
+    id: string,
+    eventDate?: number,
+    tierName?: KitTierName,
+  ): {
+    available: boolean;
+    missing: Array<{ componentId: string; name: string; need: number; have: number }>;
+  } {
     const db = read();
     const kit = db.kits.find(k => k.id === id);
     if (!kit) return { available: false, missing: [] };
+
+    // Usa BOM do tier selecionado, ou BOM base do kit
+    const tierItems = tierName
+      ? (kit.tiers?.find(t => t.name === tierName)?.items ?? kit.items)
+      : kit.items;
+
     const missing: Array<{ componentId: string; name: string; need: number; have: number }> = [];
 
-    // Calcula quantos de cada componente reutilizável já estão comprometidos nessa data
+    // Calcula componentes reutilizáveis comprometidos na data
     const committedOnDate = new Map<string, number>();
     if (eventDate) {
       const dayStart = startOfDay(eventDate);
       const dayEnd = dayStart + 86400000;
       db.sales
-        .filter(s => s.status !== "cancelado" && s.eventDate >= dayStart && s.eventDate < dayEnd)
+        .filter(s => {
+          if (s.status === "cancelado") return false;
+          const saleStart = startOfDay(s.eventDate);
+          const saleEnd   = startOfDay(s.returnDate ?? s.eventDate) + 86400000;
+          return dayStart < saleEnd && dayEnd > saleStart;
+        })
         .forEach(s => {
           const saleKit = db.kits.find(k => k.id === s.kitId);
           if (saleKit) {
-            saleKit.items.forEach(it => {
+            // BOM efetivo da venda (considera tier da venda)
+            const saleTierItems = s.kitTier
+              ? (saleKit.tiers?.find(t => t.name === s.kitTier)?.items ?? saleKit.items)
+              : saleKit.items;
+            saleTierItems.forEach(it => {
               const comp = db.components.find(c => c.id === it.componentId);
               if (comp?.reusable) {
                 committedOnDate.set(it.componentId, (committedOnDate.get(it.componentId) ?? 0) + it.quantity);
@@ -152,17 +179,17 @@ export const kitsRepo = {
         });
     }
 
-    for (const it of kit.items) {
+    for (const it of tierItems) {
       const c = db.components.find(x => x.id === it.componentId);
-      if (!c) { missing.push({ componentId: it.componentId, name: "Componente removido", need: it.quantity, have: 0 }); continue; }
-
+      if (!c) {
+        missing.push({ componentId: it.componentId, name: "Componente removido", need: it.quantity, have: 0 });
+        continue;
+      }
       if (!c.reusable) {
-        // Consumível: verifica estoque atual
         if (c.stock < it.quantity) {
           missing.push({ componentId: c.id, name: c.name, need: it.quantity, have: c.stock });
         }
       } else if (eventDate) {
-        // Reutilizável (locação): verifica conflito na data
         const committed = committedOnDate.get(c.id) ?? 0;
         if (c.stock < it.quantity + committed) {
           missing.push({ componentId: c.id, name: c.name, need: it.quantity + committed, have: c.stock });
@@ -177,20 +204,42 @@ export const kitsRepo = {
 export const salesRepo = {
   list(): Sale[] { return read().sales.slice().sort((a, b) => b.eventDate - a.eventDate); },
   get(id: string): Sale | undefined { return read().sales.find(s => s.id === id); },
+
+  update(id: string, patch: Partial<Omit<Sale, "id" | "createdAt" | "kitId" | "kitNameSnapshot">>): void {
+    let updated!: Sale;
+    mutate((db) => {
+      const i = db.sales.findIndex(s => s.id === id);
+      if (i >= 0) {
+        db.sales[i] = { ...db.sales[i], ...patch };
+        updated = db.sales[i];
+      }
+    });
+    if (updated) fsSetSale(updated).catch((e) => console.error("[db] sale update sync", e));
+  },
+
   create(input: Omit<Sale, "id" | "createdAt" | "kitNameSnapshot"> & { kitNameSnapshot?: string }): Sale {
     const db = read();
     const kit = db.kits.find(k => k.id === input.kitId);
     if (!kit) throw new Error("Kit não encontrado");
+
+    // BOM efetivo (tier ou base)
+    const effectiveItems = input.kitTier
+      ? (kit.tiers?.find(t => t.name === input.kitTier)?.items ?? kit.items)
+      : kit.items;
+
     const sale: Sale = {
       ...input,
       id: uid(),
       kitNameSnapshot: input.kitNameSnapshot ?? kit.name,
       createdAt: Date.now(),
     };
+
     const updatedComponents: Component[] = [];
     mutate((db) => {
       db.sales.push(sale);
-      for (const it of kit.items) {
+
+      // Debita BOM do kit (itens não reutilizáveis)
+      for (const it of effectiveItems) {
         const c = db.components.find(x => x.id === it.componentId);
         if (c && !c.reusable) {
           c.stock = Math.max(0, c.stock - it.quantity);
@@ -198,11 +247,25 @@ export const salesRepo = {
           updatedComponents.push(c);
         }
       }
+
+      // Debita extras (itens não reutilizáveis)
+      if (input.extraItems?.length) {
+        for (const extra of input.extraItems) {
+          const c = db.components.find(x => x.id === extra.componentId);
+          if (c && !c.reusable) {
+            c.stock = Math.max(0, c.stock - extra.quantity);
+            c.updatedAt = Date.now();
+            if (!updatedComponents.find(x => x.id === c.id)) updatedComponents.push(c);
+          }
+        }
+      }
     });
+
     fsSetSale(sale).catch((e) => console.error("[db] sale create sync", e));
     updatedComponents.forEach(c => fsSetComponent(c).catch((e) => console.error("[db] stock debit sync", e)));
     return sale;
   },
+
   updateStatus(id: string, status: Sale["status"]): void {
     const sale = read().sales.find(s => s.id === id);
     if (!sale) return;
@@ -217,48 +280,71 @@ export const salesRepo = {
       const kit = db.kits.find(k => k.id === s.kitId);
       if (!kit) return;
 
+      // BOM efetivo
+      const effectiveItems = s.kitTier
+        ? (kit.tiers?.find(t => t.name === s.kitTier)?.items ?? kit.items)
+        : kit.items;
+
+      const restoreStock = (componentId: string, qty: number) => {
+        const c = db.components.find(x => x.id === componentId);
+        if (c && !c.reusable) {
+          c.stock += qty;
+          c.updatedAt = Date.now();
+          if (!updatedComponents.find(x => x.id === c.id)) updatedComponents.push({ ...c });
+        }
+      };
+      const debitStock = (componentId: string, qty: number) => {
+        const c = db.components.find(x => x.id === componentId);
+        if (c && !c.reusable) {
+          c.stock = Math.max(0, c.stock - qty);
+          c.updatedAt = Date.now();
+          if (!updatedComponents.find(x => x.id === c.id)) updatedComponents.push({ ...c });
+        }
+      };
+
       if (status === "cancelado" && prevStatus !== "cancelado") {
         // Restaura estoque ao cancelar
-        for (const it of kit.items) {
-          const c = db.components.find(x => x.id === it.componentId);
-          if (c && !c.reusable) {
-            c.stock += it.quantity;
-            c.updatedAt = Date.now();
-            updatedComponents.push({ ...c });
-          }
-        }
+        for (const it of effectiveItems) restoreStock(it.componentId, it.quantity);
+        for (const extra of s.extraItems ?? []) restoreStock(extra.componentId, extra.quantity);
       } else if (prevStatus === "cancelado" && status !== "cancelado") {
         // Reativa venda cancelada: deduz novamente
-        for (const it of kit.items) {
-          const c = db.components.find(x => x.id === it.componentId);
-          if (c && !c.reusable) {
-            c.stock = Math.max(0, c.stock - it.quantity);
-            c.updatedAt = Date.now();
-            updatedComponents.push({ ...c });
-          }
-        }
+        for (const it of effectiveItems) debitStock(it.componentId, it.quantity);
+        for (const extra of s.extraItems ?? []) debitStock(extra.componentId, extra.quantity);
       }
     });
 
     fsUpdateSaleStatus(id, status).catch((e) => console.error("[db] sale status sync", e));
     updatedComponents.forEach(c => fsSetComponent(c).catch((e) => console.error("[db] stock sync on status change", e)));
   },
+
   remove(id: string): void {
     const sale = read().sales.find(s => s.id === id);
     const updatedComponents: Component[] = [];
 
     mutate((db) => {
       db.sales = db.sales.filter(s => s.id !== id);
-      // Restaura estoque se a venda não estava cancelada
       if (sale && sale.status !== "cancelado") {
         const kit = db.kits.find(k => k.id === sale.kitId);
         if (kit) {
-          for (const it of kit.items) {
+          const effectiveItems = sale.kitTier
+            ? (kit.tiers?.find(t => t.name === sale.kitTier)?.items ?? kit.items)
+            : kit.items;
+
+          for (const it of effectiveItems) {
             const c = db.components.find(x => x.id === it.componentId);
             if (c && !c.reusable) {
               c.stock += it.quantity;
               c.updatedAt = Date.now();
-              updatedComponents.push({ ...c });
+              updatedComponents.push(c);
+            }
+          }
+          // Restaura extras
+          for (const extra of sale.extraItems ?? []) {
+            const c = db.components.find(x => x.id === extra.componentId);
+            if (c && !c.reusable) {
+              c.stock += extra.quantity;
+              c.updatedAt = Date.now();
+              if (!updatedComponents.find(x => x.id === c.id)) updatedComponents.push(c);
             }
           }
         }
@@ -354,6 +440,30 @@ export const analytics = {
       .filter(s => s.eventDate >= now && s.status !== "cancelado")
       .sort((a, b) => a.eventDate - b.eventDate)
       .slice(0, limit);
+  },
+  /** Vendas com retorno pendente (returnDate no futuro próximo, status entregue) */
+  pendingReturns(days = 7): Sale[] {
+    const now = Date.now();
+    const limit = now + days * 86400000;
+    return salesRepo.list()
+      .filter(s =>
+        s.returnDate &&
+        s.returnDate >= now &&
+        s.returnDate <= limit &&
+        s.status === "entregue",
+      )
+      .sort((a, b) => (a.returnDate ?? 0) - (b.returnDate ?? 0));
+  },
+  /** Vendas com retorno em atraso (returnDate no passado, não concluído/cancelado) */
+  overdueReturns(): Sale[] {
+    const now = Date.now();
+    return salesRepo.list()
+      .filter(s =>
+        s.returnDate &&
+        s.returnDate < now &&
+        !["concluido", "cancelado"].includes(s.status),
+      )
+      .sort((a, b) => (a.returnDate ?? 0) - (b.returnDate ?? 0));
   },
   componentUsage(componentId: string): { kits: Kit[] } {
     return { kits: kitsRepo.list().filter(k => k.items.some(it => it.componentId === componentId)) };
