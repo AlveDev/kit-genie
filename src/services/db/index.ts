@@ -3,7 +3,7 @@
 // Escrita: atualiza cache imediatamente + persiste no Firestore em background.
 
 import type {
-  Component, CostEntry, DbSchema, Kit, KitTierName, Profile, Sale, Settings,
+  CatalogConfig, Component, CostEntry, DbSchema, Kit, KitTierName, Profile, Sale, Settings,
 } from "./types";
 import {
   loadDb, notify, subscribe,
@@ -12,6 +12,7 @@ import {
   fsSetSale, fsUpdateSaleStatus, fsDeleteSale,
   fsSetCost, fsDeleteCost,
   fsSetProfile, fsSetSettings,
+  fsSetCatalogConfig,
 } from "./firestore";
 
 export { subscribe } from "./firestore";
@@ -379,6 +380,15 @@ export const costsRepo = {
   remove(id: string): void {
     mutate((db) => { db.costs = db.costs.filter(c => c.id !== id); });
     fsDeleteCost(id).catch((e) => console.error("[db] cost delete sync", e));
+  },
+};
+
+// ---------- Catalog white-label ----------
+export const catalogRepo = {
+  get(): CatalogConfig | null { return read().catalogConfig; },
+  save(cfg: CatalogConfig): void {
+    mutate((db) => { db.catalogConfig = cfg; });
+    fsSetCatalogConfig(cfg).catch((e) => console.error("[db] catalog sync", e));
   },
 };
 

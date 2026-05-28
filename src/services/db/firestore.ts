@@ -7,7 +7,7 @@ import {
   getDocs, getDoc, writeBatch, type Unsubscribe,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import type { Component, Kit, Sale, CostEntry, Profile, Settings, DbSchema } from "./types";
+import type { CatalogConfig, Component, Kit, Sale, CostEntry, Profile, Settings, DbSchema } from "./types";
 
 // ── Cache em memória ─────────────────────────────────────────────────────────
 
@@ -71,6 +71,10 @@ export async function initUserDb(userId: string): Promise<void> {
       if (snap.exists()) cache.settings = snap.data() as Settings;
       notify();
     }),
+    onSnapshot(doc(db, "users", userId, "catalog", "config"), (snap) => {
+      cache.catalogConfig = snap.exists() ? (snap.data() as CatalogConfig) : null;
+      notify();
+    }),
   );
 }
 
@@ -83,13 +87,14 @@ export function teardownUserDb(): void {
 }
 
 async function loadAllOnce(userId: string): Promise<void> {
-  const [comps, kits, sales, costs, profileSnap, settingsSnap] = await Promise.all([
+  const [comps, kits, sales, costs, profileSnap, settingsSnap, catalogSnap] = await Promise.all([
     getDocs(collection(db, "users", userId, "components")),
     getDocs(collection(db, "users", userId, "kits")),
     getDocs(collection(db, "users", userId, "sales")),
     getDocs(collection(db, "users", userId, "costs")),
     getDoc(doc(db, "users", userId, "meta", "profile")),
     getDoc(doc(db, "users", userId, "meta", "settings")),
+    getDoc(doc(db, "users", userId, "catalog", "config")),
   ]);
   cache.components = comps.docs.map((d) => d.data() as Component);
   cache.kits = kits.docs.map((d) => d.data() as Kit);
@@ -97,6 +102,7 @@ async function loadAllOnce(userId: string): Promise<void> {
   cache.costs = costs.docs.map((d) => d.data() as CostEntry);
   if (profileSnap.exists()) cache.profile = profileSnap.data() as Profile;
   if (settingsSnap.exists()) cache.settings = settingsSnap.data() as Settings;
+  if (catalogSnap.exists()) cache.catalogConfig = catalogSnap.data() as CatalogConfig;
   notify();
 }
 
@@ -151,6 +157,14 @@ export async function fsSetSettings(s: Settings): Promise<void> {
   await setDoc(doc(db, "users", userPath(), "meta", "settings"), s);
 }
 
+export async function fsSetCatalogConfig(cfg: CatalogConfig): Promise<void> {
+  const uid = userPath();
+  await setDoc(doc(db, "users", uid, "catalog", "config"), cfg);
+  if (cfg.slug) {
+    await setDoc(doc(db, "slugs", cfg.slug), { userId: uid });
+  }
+}
+
 // Seed inicial: popula Firestore com dados de exemplo (chamado no onboarding se DB vazio)
 export async function fsSeedUser(data: DbSchema): Promise<void> {
   const uid = userPath();
@@ -181,5 +195,6 @@ function defaultSchema(): DbSchema {
     kits: [],
     sales: [],
     costs: [],
+    catalogConfig: null,
   };
 }

@@ -3,7 +3,7 @@ import { Link, useLocation } from "@tanstack/react-router";
 import {
   LayoutDashboard, Package, Boxes, ShoppingBag, Wallet,
   FileBarChart, Settings as SettingsIcon, Menu, X, LogOut,
-  Users,
+  Users, Globe,
 } from "lucide-react";
 import { cls } from "@/lib/format";
 import { useAuth } from "@/services/auth/auth-context";
@@ -16,6 +16,7 @@ const NAV: NavItem[] = [
   { to: "/app/sales", label: "Vendas & Agenda", icon: ShoppingBag },
   { to: "/app/finance", label: "Finanças", icon: Wallet },
   { to: "/app/reports", label: "Relatórios", icon: FileBarChart },
+  { to: "/app/catalog", label: "Catálogo", icon: Globe },
   { to: "/app/settings", label: "Configurações", icon: SettingsIcon },
   { to: "/app/customers", label: "Clientes", icon: Users },
 ];
