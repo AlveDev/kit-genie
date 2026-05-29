@@ -146,8 +146,8 @@ export const kitsRepo = {
 
     // Usa BOM do tier selecionado, ou BOM base do kit
     const tierItems = tierName
-      ? (kit.tiers?.find(t => t.name === tierName)?.items ?? kit.items)
-      : kit.items;
+      ? (kit.tiers?.find(t => t.name === tierName)?.items ?? kit.items ?? [])
+      : (kit.items ?? []);
 
     const missing: Array<{ componentId: string; name: string; need: number; have: number }> = [];
 
@@ -168,8 +168,8 @@ export const kitsRepo = {
           if (saleKit) {
             // BOM efetivo da venda (considera tier da venda)
             const saleTierItems = s.kitTier
-              ? (saleKit.tiers?.find(t => t.name === s.kitTier)?.items ?? saleKit.items)
-              : saleKit.items;
+              ? (saleKit.tiers?.find(t => t.name === s.kitTier)?.items ?? saleKit.items ?? [])
+              : (saleKit.items ?? []);
             saleTierItems.forEach(it => {
               const comp = db.components.find(c => c.id === it.componentId);
               if (comp?.reusable) {
@@ -225,8 +225,8 @@ export const salesRepo = {
 
     // BOM efetivo (tier ou base)
     const effectiveItems = input.kitTier
-      ? (kit.tiers?.find(t => t.name === input.kitTier)?.items ?? kit.items)
-      : kit.items;
+      ? (kit.tiers?.find(t => t.name === input.kitTier)?.items ?? kit.items ?? [])
+      : (kit.items ?? []);
 
     const sale: Sale = {
       ...input,
@@ -283,8 +283,8 @@ export const salesRepo = {
 
       // BOM efetivo
       const effectiveItems = s.kitTier
-        ? (kit.tiers?.find(t => t.name === s.kitTier)?.items ?? kit.items)
-        : kit.items;
+        ? (kit.tiers?.find(t => t.name === s.kitTier)?.items ?? kit.items ?? [])
+        : (kit.items ?? []);
 
       const restoreStock = (componentId: string, qty: number) => {
         const c = db.components.find(x => x.id === componentId);
@@ -328,8 +328,8 @@ export const salesRepo = {
         const kit = db.kits.find(k => k.id === sale.kitId);
         if (kit) {
           const effectiveItems = sale.kitTier
-            ? (kit.tiers?.find(t => t.name === sale.kitTier)?.items ?? kit.items)
-            : kit.items;
+            ? (kit.tiers?.find(t => t.name === sale.kitTier)?.items ?? kit.items ?? [])
+            : (kit.items ?? []);
 
           for (const it of effectiveItems) {
             const c = db.components.find(x => x.id === it.componentId);
