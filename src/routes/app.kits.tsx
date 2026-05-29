@@ -217,7 +217,7 @@ function KitCard({ kit: k, onClick }: { kit: Kit; onClick: () => void }) {
             <p className="text-xl font-bold text-primary">
               {hasTiers ? <><span className="text-xs font-normal text-muted-foreground">a partir de </span>{brl(k.tiers![0].price)}</> : brl(k.price)}
             </p>
-            <p className="text-[10px] text-muted-foreground">{k.items.length} componente{k.items.length !== 1 ? "s" : ""}</p>
+            <p className="text-[10px] text-muted-foreground">{(k.items?.length ?? 0)} componente{(k.items?.length ?? 0) !== 1 ? "s" : ""}</p>
           </div>
           {av.available ? (
             <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">
@@ -268,7 +268,7 @@ function KitRow({ kit: k, onClick, last }: { kit: Kit; onClick: () => void; last
         <p className="font-bold text-base">
           {hasTiers ? `${brl(k.tiers![0].price)} ~ ${brl(k.tiers![2]?.price ?? k.tiers![k.tiers!.length - 1].price)}` : brl(k.price)}
         </p>
-        <p className="text-[10px] text-muted-foreground">{k.items.length} comp.</p>
+        <p className="text-[10px] text-muted-foreground">{(k.items?.length ?? 0)} comp.</p>
       </div>
       <div className="shrink-0">
         {av.available ? <CheckCircle2 className="size-4 text-emerald-500" /> : <AlertCircle className="size-4 text-red-500" />}
