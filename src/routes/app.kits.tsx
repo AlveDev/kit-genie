@@ -685,7 +685,7 @@ function KitDialog({
 
                 {/* Conteúdo do tier ativo */}
                 {TIER_NAMES.map(tierName => {
-                  const tierData = tiers.find(t => t.name === tierName)!;
+                  const tierData = tiers.find(t => t.name === tierName) ?? { name: tierName, price: 0, items: [], description: "" };
                   const meta = TIER_META[tierName];
                   const cost = bomCost(tierData.items);
                   if (tierName !== activeTier) return null;
