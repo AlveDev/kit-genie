@@ -166,7 +166,7 @@ function KitCard({ kit: k, onClick }: { kit: Kit; onClick: () => void }) {
   const av = kitsRepo.availability(k.id);
   const hasTiers = (k.tiers?.length ?? 0) > 0;
   const priceRange = hasTiers
-    ? `${brl(k.tiers![0].price)} ~ ${brl(k.tiers![k.tiers!.length - 1].price)}`
+    ? `${brl(k.tiers?.[0]?.price ?? 0)} ~ ${brl(k.tiers?.[k.tiers.length - 1]?.price ?? 0)}`
     : brl(k.price);
 
   return (
@@ -215,7 +215,7 @@ function KitCard({ kit: k, onClick }: { kit: Kit; onClick: () => void }) {
         <div className="flex items-end justify-between">
           <div>
             <p className="text-xl font-bold text-primary">
-              {hasTiers ? <><span className="text-xs font-normal text-muted-foreground">a partir de </span>{brl(k.tiers![0].price)}</> : brl(k.price)}
+              {hasTiers ? <><span className="text-xs font-normal text-muted-foreground">a partir de </span>{brl(k.tiers?.[0]?.price ?? 0)}</> : brl(k.price)}
             </p>
             <p className="text-[10px] text-muted-foreground">{(k.items?.length ?? 0)} componente{(k.items?.length ?? 0) !== 1 ? "s" : ""}</p>
           </div>
@@ -266,7 +266,7 @@ function KitRow({ kit: k, onClick, last }: { kit: Kit; onClick: () => void; last
       </div>
       <div className="text-right shrink-0">
         <p className="font-bold text-base">
-          {hasTiers ? `${brl(k.tiers![0].price)} ~ ${brl(k.tiers![2]?.price ?? k.tiers![k.tiers!.length - 1].price)}` : brl(k.price)}
+          {hasTiers ? `${brl(k.tiers?.[0]?.price ?? 0)} ~ ${brl(k.tiers?.[2]?.price ?? k.tiers?.[k.tiers.length - 1]?.price ?? 0)}` : brl(k.price)}
         </p>
         <p className="text-[10px] text-muted-foreground">{(k.items?.length ?? 0)} comp.</p>
       </div>
@@ -398,7 +398,7 @@ function KitDialog({
     try {
       let payload: Omit<Kit, "id" | "createdAt" | "updatedAt">;
       if (tiersEnabled) {
-        const bronzeTier = tiers.find(t => t.name === "bronze")!;
+        const bronzeTier = tiers.find(t => t.name === "bronze") ?? { name: "bronze", price: 0, items: [], description: "" };
         payload = {
           name: name.trim(), theme, type, description,
           price: bronzeTier.price,    // preço base = Bronze
@@ -659,7 +659,7 @@ function KitDialog({
                 <div className="flex gap-1 bg-card border border-border rounded-xl p-1">
                   {TIER_NAMES.map(t => {
                     const m = TIER_META[t];
-                    const tierData = tiers.find(x => x.name === t)!;
+                    const tierData = tiers.find(x => x.name === t) ?? { name: t, price: 0, items: [], description: "" };
                     return (
                       <button
                         key={t}
@@ -731,7 +731,7 @@ function KitDialog({
                 <div className="flex items-center gap-2 pt-2 border-t border-border">
                   {TIER_NAMES.map(t => {
                     const m = TIER_META[t];
-                    const tierData = tiers.find(x => x.name === t)!;
+                    const tierData = tiers.find(x => x.name === t) ?? { name: t, price: 0, items: [], description: "" };
                     return (
                       <div key={t} className={cls("flex-1 text-center py-2 rounded-xl", m.bg)}>
                         <p className={cls("text-[10px] font-bold", m.color)}>{m.emoji} {m.label}</p>

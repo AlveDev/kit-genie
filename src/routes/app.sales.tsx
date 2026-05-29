@@ -283,7 +283,7 @@ function SaleRow({ sale: s, onContract, onEdit }: { sale: Sale; onContract: (s: 
       {/* Total */}
       <td className="px-5 py-3.5 text-right">
         <p className="font-mono font-bold tabular-nums">{brl(s.totalPrice)}</p>
-        {s.freight?.enabled && s.freight.price > 0 && (
+        {s.freight?.enabled && s.freight?.price > 0 && (
           <p className="text-[10px] text-orange-600 flex items-center justify-end gap-0.5 mt-0.5">
             <Truck className="size-2.5" />{brl(s.freight.price)} frete
           </p>
@@ -509,8 +509,8 @@ function SaleDialog({ onClose }: { onClose: () => void }) {
   const kitBomIds = React.useMemo(() => {
     if (!selectedKit) return new Set<string>();
     const bomItems = effectiveTier
-      ? (selectedKit.tiers?.find(t => t.name === effectiveTier)?.items ?? selectedKit.items)
-      : selectedKit.items;
+      ? (selectedKit.tiers?.find(t => t.name === effectiveTier)?.items ?? selectedKit.items ?? [])
+      : (selectedKit.items ?? []);
     return new Set(bomItems.map(it => it.componentId));
   }, [selectedKit, effectiveTier]);
 
