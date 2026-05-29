@@ -327,7 +327,7 @@ function KitDialog({
   /* ── Tiers ── */
   const [tiersEnabled,  setTiersEnabled]  = React.useState(!!(kit?.tiers?.length));
   const [tiers,         setTiers]         = React.useState<KitTier[]>(
-    kit?.tiers?.length ? kit.tiers : DEFAULT_TIERS.map(t => ({ ...t, items: [] })),
+    kit?.tiers?.length ? kit.tiers : DEFAULT_TIERS.map(t => ({ ...t, items: t.name === "bronze" ? (kit?.items ?? []) : [], price: t.name === "bronze" ? (kit?.price ?? 0) : 0 })),
   );
   const [activeTier, setActiveTier] = React.useState<KitTierName>("bronze");
 
