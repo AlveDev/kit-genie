@@ -83,11 +83,11 @@ export const componentsRepo = {
   remove(id: string): void {
     mutate((db) => {
       db.components = db.components.filter(c => c.id !== id);
-      db.kits.forEach(k => { k.items = k.items.filter(it => it.componentId !== id); });
+      db.kits.forEach(k => { k.items = (k.items ?? []).filter(it => it.componentId !== id); });
     });
     fsDeleteComponent(id).catch((e) => console.error("[db] component delete sync", e));
     read().kits
-      .filter(k => k.items.some(it => it.componentId !== id))
+      .filter(k => (k.items ?? []).some(it => it.componentId !== id))
       .forEach(k => fsSetKit(k).catch((e) => console.error("[db] kit update after component delete", e)));
   },
   adjustStock(id: string, delta: number): void {
@@ -476,7 +476,7 @@ export const analytics = {
       .sort((a, b) => (a.returnDate ?? 0) - (b.returnDate ?? 0));
   },
   componentUsage(componentId: string): { kits: Kit[] } {
-    return { kits: kitsRepo.list().filter(k => k.items.some(it => it.componentId === componentId)) };
+    return { kits: kitsRepo.list().filter(k => (k.items ?? []).some(it => it.componentId === componentId)) };
   },
 };
 
