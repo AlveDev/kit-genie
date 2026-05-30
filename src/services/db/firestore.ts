@@ -157,8 +157,11 @@ export async function fsSetSettings(s: Settings): Promise<void> {
   await setDoc(doc(db, "users", userPath(), "meta", "settings"), s);
 }
 
-export async function fsSetCatalogConfig(cfg: CatalogConfig): Promise<void> {
+export async function fsSetCatalogConfig(cfg: CatalogConfig, prevSlug?: string): Promise<void> {
   const uid = userPath();
+  if (prevSlug && prevSlug !== cfg.slug) {
+    await deleteDoc(doc(db, "slugs", prevSlug));
+  }
   await setDoc(doc(db, "users", uid, "catalog", "config"), cfg);
   if (cfg.slug) {
     await setDoc(doc(db, "slugs", cfg.slug), { userId: uid });

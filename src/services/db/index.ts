@@ -387,8 +387,9 @@ export const costsRepo = {
 export const catalogRepo = {
   get(): CatalogConfig | null { return read().catalogConfig; },
   save(cfg: CatalogConfig): void {
+    const prevSlug = read().catalogConfig?.slug;
     mutate((db) => { db.catalogConfig = cfg; });
-    fsSetCatalogConfig(cfg).catch((e) => console.error("[db] catalog sync", e));
+    fsSetCatalogConfig(cfg, prevSlug).catch((e) => console.error("[db] catalog sync", e));
   },
 };
 
