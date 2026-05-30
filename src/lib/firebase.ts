@@ -28,4 +28,5 @@ export const db = initializeFirestore(app, {
   localCache: isBrowser
     ? persistentLocalCache({ tabManager: persistentMultipleTabManager() })
     : memoryLocalCache(),
+  ignoreUndefinedProperties: true,
 });
